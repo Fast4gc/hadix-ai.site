@@ -46,44 +46,42 @@ hadix-ai.site/
 
 ---
 
-## Instalação (uma linha)
+## Instalação
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/Fast4gc/hadix.app/main/install.sh
-chmod +x install.sh
+cd hadix-ai.site
 sudo ./install.sh
 ```
 
-ou com wget:
+O script instala Docker/Compose (se necessário), gera o `.env` interativamente, cria o `scripts/setup-drive.php` (arquivo não versionado) e sobe a stack completa.
 
-```bash
-wget https://raw.githubusercontent.com/Fast4gc/hadix.app/main/install.sh
-chmod +x install.sh
-sudo ./install.sh
+### Flags
+
+```
+-y, --yes            Não interativo (define tudo via variáveis de ambiente)
+--skip-env           Mantém o .env existente
+-f, --force-env      Recria o .env do zero
+--no-docker          Pula instalação do Docker
 ```
 
-O script instala o Docker/Compose (quando necessário), clona o repositório em `/opt/hadix`, cria o `.env` interativamente (domínios, e-mail e segredos), sobe a stack, baixa o modelo e configura o usuário do drive. Saiba mais com `sudo ./install.sh --help`.
-
-## Instalação passo a passo (manual)
-
-### 1. Clonar o repositório
+### Exemplo não interativo
 
 ```bash
-git clone <url-do-repositorio> hadix
-cd hadix/backend
+EMAIL=voce@exemplo.com \
+API_DOMAIN=api.exemplo.com \
+DRIVE_DOMAIN=drive.exemplo.com \
+sudo -E ./install.sh -y
 ```
 
-### 2. Criar o arquivo `.env`
+### Instalação manual (sem o script)
 
 ```bash
+cd backend
 cp .env.example .env
 nano .env
-```
-
-Preencha todas as variáveis (menos as opcionais). Gere o token e as senhas com, por exemplo:
-
-```bash
-openssl rand -hex 32   # use o resultado em API_TOKEN
+# gere segredos com: openssl rand -hex 32
+docker compose up -d --build
+docker compose exec ollama ollama pull qwen3:4b
 ```
 
 ### 3. Subir a stack
