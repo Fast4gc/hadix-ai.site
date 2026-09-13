@@ -67,7 +67,7 @@ cd hadix-ai.site
 sudo ./install.sh
 ```
 
-> **Substitua** `Fast4gc` pelo seu usuário GitHub e `SEU-IP` pelo IP do VPS.
+> **Nota:** o repositório precisa estar **público** no GitHub para o `wget`/`curl` funcionar (repo privado retorna 404/arquivo vazio). Em GitHub → Settings → Danger Zone → Change visibility → Make public.
 
 O script detecta automaticamente se está dentro do repositório ou foi baixado via wget. Em ambos os casos:
 - Instala Docker/Compose (se necessário)
