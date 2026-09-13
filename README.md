@@ -51,13 +51,13 @@ hadix-ai.site/
 ### Via SSH (PowerShell)
 
 ```powershell
-ssh root@SEU-IP "wget -qO- https://raw.githubusercontent.com/SEU-USER/hadix-ai.site/main/install.sh | bash"
+ssh root@SEU-IP "wget -qO- https://raw.githubusercontent.com/Fast4gc/hadix-ai.site/main/install.sh | bash"
 ```
 
 ### Via wget no VPS
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/SEU-USER/hadix-ai.site/main/install.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/Fast4gc/hadix-ai.site/main/install.sh | sudo bash
 ```
 
 ### Local (dentro do repositório)
@@ -67,7 +67,7 @@ cd hadix-ai.site
 sudo ./install.sh
 ```
 
-> **Substitua** `SEU-USER` pelo seu usuário GitHub e `SEU-IP` pelo IP do VPS.
+> **Substitua** `Fast4gc` pelo seu usuário GitHub e `SEU-IP` pelo IP do VPS.
 
 O script detecta automaticamente se está dentro do repositório ou foi baixado via wget. Em ambos os casos:
 - Instala Docker/Compose (se necessário)

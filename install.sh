@@ -6,10 +6,10 @@
 #   sudo ./install.sh
 #
 # Modo 2 — Via wget (no VPS):
-#   wget -qO- https://raw.githubusercontent.com/SEU-USER/hadix-ai.site/main/install.sh | sudo bash
+#   wget -qO- https://raw.githubusercontent.com/Fast4gc/hadix-ai.site/main/install.sh | sudo bash
 #
 # Modo 3 — Via SSH do PowerShell:
-#   ssh root@IP "wget -qO- https://raw.githubusercontent.com/SEU-USER/hadix-ai.site/main/install.sh | bash"
+#   ssh root@IP "wget -qO- https://raw.githubusercontent.com/Fast4gc/hadix-ai.site/main/install.sh | bash"
 #
 # Flags:
 #   -y, --yes            Não interativo (usa variáveis de ambiente).
@@ -27,7 +27,7 @@ warn() { printf '\033[1;33m[!]\033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
 
 # -------------------------------- variáveis ---------------------------------
-REPO_URL="${HADIX_REPO_URL:-https://github.com/SEU-USER/hadix-ai.site.git}"
+REPO_URL="${HADIX_REPO_URL:-https://github.com/Fast4gc/hadix-ai.site.git}"
 REPO_BRANCH="${HADIX_BRANCH:-main}"
 INSTALL_DIR="${HADIX_DIR:-/opt/hadix}"
 MODEL_DEFAULT="${OLLAMA_MODEL:-qwen3:4b}"
