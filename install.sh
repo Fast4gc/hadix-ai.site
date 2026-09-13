@@ -2,14 +2,20 @@
 #
 # Hadix AI — instalador do backend
 #
-# Uso:
+# Modo 1 — Dentro do repositório:
 #   sudo ./install.sh
 #
+# Modo 2 — Via wget (no VPS):
+#   wget -qO- https://raw.githubusercontent.com/SEU-USER/hadix-ai.site/main/install.sh | sudo bash
+#
+# Modo 3 — Via SSH do PowerShell:
+#   ssh root@IP "wget -qO- https://raw.githubusercontent.com/SEU-USER/hadix-ai.site/main/install.sh | bash"
+#
 # Flags:
-#   -y, --yes            Modo não interativo (usa variáveis de ambiente).
+#   -y, --yes            Não interativo (usa variáveis de ambiente).
 #   --skip-env           Não cria nem altera o .env existente.
 #   -f, --force-env      Recria o .env do zero.
-#   --no-docker          Não instala o Docker (presume que já está instalado).
+#   --no-docker          Não instala o Docker.
 #
 
 set -euo pipefail
@@ -21,17 +27,31 @@ warn() { printf '\033[1;33m[!]\033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
 
 # -------------------------------- variáveis ---------------------------------
+REPO_URL="${HADIX_REPO_URL:-https://github.com/SEU-USER/hadix-ai.site.git}"
+REPO_BRANCH="${HADIX_BRANCH:-main}"
+INSTALL_DIR="${HADIX_DIR:-/opt/hadix}"
+MODEL_DEFAULT="${OLLAMA_MODEL:-qwen3:4b}"
+QUOTA_DEFAULT="${DRIVE_QUOTA:-20 GB}"
+
 INTERACTIVE=1
 FORCE_ENV=0
 SKIP_ENV=0
 INSTALL_DOCKER=1
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKEND_DIR="$SCRIPT_DIR/backend"
+
+# Detectar se estamos dentro do repositório
+if [ -f "$SCRIPT_DIR/backend/compose.yaml" ]; then
+  PROJECT_DIR="$SCRIPT_DIR"
+  CLONE_NEEDED=0
+else
+  PROJECT_DIR="$INSTALL_DIR"
+  CLONE_NEEDED=1
+fi
+
+BACKEND_DIR="$PROJECT_DIR/backend"
 ENV_FILE="$BACKEND_DIR/.env"
 SETUP_PHP="$BACKEND_DIR/scripts/setup-drive.php"
-MODEL_DEFAULT="${OLLAMA_MODEL:-qwen3:4b}"
-QUOTA_DEFAULT="${DRIVE_QUOTA:-20 GB}"
 
 # -------------------------------- argumentos --------------------------------
 while [ $# -gt 0 ]; do
@@ -49,7 +69,6 @@ done
 
 # -------------------------------- pré-checagens -----------------------------
 [ "$(id -u)" -eq 0 ] || die "Execute com sudo: sudo ./install.sh"
-[ -d "$BACKEND_DIR" ] || die "backend/ não encontrado em $SCRIPT_DIR"
 
 mem_gb=0
 if [ -r /proc/meminfo ]; then
@@ -85,7 +104,7 @@ install_docker() {
     apt-get install -y -qq git curl openssl ca-certificates gnupg >/dev/null
   fi
 
-  command -v curl >/dev/null 2>&1 || die "curl necessário. Instale: apt-get install -y curl"
+  command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1 || die "curl ou wget necessário."
 
   curl -fsSL https://get.docker.com | sh
   systemctl enable --now docker >/dev/null 2>&1 || true
@@ -102,9 +121,30 @@ install_docker() {
   ok "Docker pronto."
 }
 
+# -------------------------------- repositório --------------------------------
+clone_repo() {
+  if [ "$CLONE_NEEDED" -eq 0 ]; then
+    ok "Repositório detectado em: $PROJECT_DIR"
+    return
+  fi
+
+  if [ -d "$PROJECT_DIR/.git" ]; then
+    info "Atualizando repositório em $PROJECT_DIR..."
+    git -C "$PROJECT_DIR" fetch --quiet --depth=1 origin "$REPO_BRANCH"
+    git -C "$PROJECT_DIR" reset --hard --quiet "origin/$REPO_BRANCH"
+  else
+    if [ -e "$PROJECT_DIR" ] && [ ! -d "$PROJECT_DIR/.git" ]; then
+      die "$PROJECT_DIR existe e não é repositório git. Use -d <outro> ou remova."
+    fi
+    info "Clonando repositório em $PROJECT_DIR..."
+    mkdir -p "$(dirname "$PROJECT_DIR")"
+    git clone --quiet --depth=1 -b "$REPO_BRANCH" "$REPO_URL" "$PROJECT_DIR"
+  fi
+
+  [ -d "$BACKEND_DIR" ] || die "backend/ não encontrado no repositório."
+}
+
 # -------------------------------- setup-drive.php ----------------------------
-# O compose monta ./scripts/setup-drive.php no Nextcloud.
-# Arquivo não versionado — geramos se não existir.
 ensure_setup_php() {
   [ -f "$SETUP_PHP" ] && return
   warn "scripts/setup-drive.php não existe — gerando versão padrão."
@@ -316,6 +356,7 @@ summary() {
 # -------------------------------- main --------------------------------------
 main() {
   install_docker
+  clone_repo
   ensure_setup_php
   configure_env
   deploy

@@ -48,12 +48,32 @@ hadix-ai.site/
 
 ## Instalação
 
+### Via SSH (PowerShell)
+
+```powershell
+ssh root@SEU-IP "wget -qO- https://raw.githubusercontent.com/SEU-USER/hadix-ai.site/main/install.sh | bash"
+```
+
+### Via wget no VPS
+
+```bash
+wget -qO- https://raw.githubusercontent.com/SEU-USER/hadix-ai.site/main/install.sh | sudo bash
+```
+
+### Local (dentro do repositório)
+
 ```bash
 cd hadix-ai.site
 sudo ./install.sh
 ```
 
-O script instala Docker/Compose (se necessário), gera o `.env` interativamente, cria o `scripts/setup-drive.php` (arquivo não versionado) e sobe a stack completa.
+> **Substitua** `SEU-USER` pelo seu usuário GitHub e `SEU-IP` pelo IP do VPS.
+
+O script detecta automaticamente se está dentro do repositório ou foi baixado via wget. Em ambos os casos:
+- Instala Docker/Compose (se necessário)
+- Gera o `.env` interativamente
+- Cria o `scripts/setup-drive.php`
+- Sobe a stack completa
 
 ### Flags
 
@@ -62,26 +82,6 @@ O script instala Docker/Compose (se necessário), gera o `.env` interativamente,
 --skip-env           Mantém o .env existente
 -f, --force-env      Recria o .env do zero
 --no-docker          Pula instalação do Docker
-```
-
-### Exemplo não interativo
-
-```bash
-EMAIL=voce@exemplo.com \
-API_DOMAIN=api.exemplo.com \
-DRIVE_DOMAIN=drive.exemplo.com \
-sudo -E ./install.sh -y
-```
-
-### Instalação manual (sem o script)
-
-```bash
-cd backend
-cp .env.example .env
-nano .env
-# gere segredos com: openssl rand -hex 32
-docker compose up -d --build
-docker compose exec ollama ollama pull qwen3:4b
 ```
 
 ### 3. Subir a stack
