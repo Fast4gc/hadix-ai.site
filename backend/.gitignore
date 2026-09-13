@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.example
+CREDENTIALS.md
+backups/
+node_modules/
+api/node_modules/
+*.log

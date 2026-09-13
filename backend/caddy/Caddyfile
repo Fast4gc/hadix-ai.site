@@ -1,0 +1,28 @@
+{
+  email {$ACME_EMAIL}
+  admin off
+}
+
+{$API_DOMAIN} {
+  encode zstd gzip
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    -Server
+  }
+  reverse_proxy api:3000 {
+    transport http {
+      response_header_timeout 250s
+    }
+  }
+}
+
+{$DRIVE_DOMAIN} {
+  encode zstd gzip
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    -Server
+  }
+  redir /.well-known/carddav /remote.php/dav 301
+  redir /.well-known/caldav /remote.php/dav 301
+  reverse_proxy nextcloud:80
+}
