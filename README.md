@@ -1,0 +1,183 @@
+# Hadix AI
+
+Landing page estática + backend completo para VPS, orquestrado com Docker Compose.
+
+```
+hadix-ai.site/
+├── index.html          # Landing page (front estático)
+├── assets/             # CSS, JS e imagens do front
+└── backend/            # Stack Docker Compose
+    ├── compose.yaml
+    ├── caddy/Caddyfile
+    ├── api/            # API custom (Node 24 + Express 5)
+    └── scripts/setup-drive.php   # (fora do git — ver nota)
+```
+
+---
+
+## Elementos usados no backend
+
+| Serviço | Imagem | Função |
+| --- | --- | --- |
+| `caddy` | `caddy:2.11.4-alpine` | Reverse proxy na borda + TLS automático (ACME). Publica as portas 80/443 e roteia `API_DOMAIN` → `api:3000` e `DRIVE_DOMAIN` → `nextcloud:80`. |
+| `api` | build local (`build: ./api`) | API REST em **Node 24 + Express 5** (`helmet`, `express-rate-limit`). Valida token Bearer, define CORS, limita 12 req/min e encaminha `/api/chat` para o Ollama. |
+| `ollama` | `ollama/ollama:0.34.0` | Motor de inferência local de LLMs. Modelo padrão: `qwen3:4b`. |
+| `postgres` | `postgres:17-alpine` | Banco de dados do Nextcloud. |
+| `redis` | `redis:8-alpine` | Cache/session do Nextcloud (limitado a 192 MB). |
+| `nextcloud` | `nextcloud:32.0.15-apache` | Drive de arquivos do Hadix. |
+| `cron` | `nextcloud:32.0.15-apache` | Executa o cron do Nextcloud (`/cron.sh`). |
+
+### Redes
+
+- `edge` — `172.30.50.0/24`: recebe `caddy`, `api` e `nextcloud`. **Somente o Caddy expõe portas no host** (`80`, `443`, `443/udp`); API, Ollama e banco não têm porta publicada.
+- `inference` — conecta `api` ↔ `ollama` (com egress para baixar modelos).
+- `data` — `internal: true`: conecta `postgres`, `redis` e `nextcloud`, sem acesso à internet.
+
+---
+
+## Pré-requisitos da VPS
+
+- **Docker Engine 24+** com **Docker Compose v2**.
+- **Hardware**: mínimo 16 GB de RAM e 6 vCPU; recomendado **32 GB / 8 vCPU** (o `compose.yaml` define limites de memória: ollama 12 GB, nextcloud 3 GB, postgres 1 GB). Disco SSD de ~40 GB (modelo `qwen3:4b` ocupa ~4 GB).
+- **Domínio com 2 subdomínios** apontando (registro A) para o IP público da VPS:
+  - `API_DOMAIN` (ex.: `api.hadix-ai.site`) → IP da VPS
+  - `DRIVE_DOMAIN` (ex.: `drive.hadix-ai.site`) → IP da VPS
+- **Firewall**: liberar `80/tcp`, `443/tcp` e `443/udp` (HTTP/3).
+
+---
+
+## Instalação passo a passo
+
+### 1. Clonar o repositório
+
+```bash
+git clone <url-do-repositorio> hadix
+cd hadix/backend
+```
+
+### 2. Criar o arquivo `.env`
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+Preencha todas as variáveis (menos as opcionais). Gere o token e as senhas com, por exemplo:
+
+```bash
+openssl rand -hex 32   # use o resultado em API_TOKEN
+```
+
+### 3. Subir a stack
+
+```bash
+docker compose up -d --build
+```
+
+Na primeira execução:
+
+- o `compose.yaml` monta `./scripts/setup-drive.php` dentro do contêiner do Nextcloud. **Este arquivo é esperado mas não está versionado** — ele cria o usuário do drive (`HADIX_DRIVE_USER`) com a quota `DRIVE_QUOTA`. Sem ele, a criação do serviço `nextcloud` falha. Veja a nota no fim do documento.
+- Os certificados HTTPS são emitidos automaticamente pelo Caddy via ACME (e-mail em `ACME_EMAIL`).
+
+### 4. Baixar o modelo no Ollama
+
+```bash
+docker compose exec ollama ollama pull qwen3:4b   # ou $OLLAMA_MODEL
+```
+
+Se o modelo não estiver presente, a API responde `status: model_missing` em `/api/ready` e `model_missing` (503) em `/api/chat`. A imagem do Ollama só baixa o modelo quando você executa `ollama pull` — não é feito no `up`. Para prever este passo:
+
+```bash
+docker compose exec ollama ollama run qwen3:4b 'oi'   # testa e deixa o modelo carregado
+```
+
+### 5. Verificar a instalação
+
+```bash
+docker compose ps                       # todos os serviços "running"/"healthy"
+curl -s https://$API_DOMAIN/healthz     # {"status":"ok"} — público, sem token
+curl -s -H "Authorization: Bearer $API_TOKEN" https://$API_DOMAIN/api/ready
+# e: curl -s -H "Authorization: Bearer $API_TOKEN" https://$API_DOMAIN/api/config
+```
+
+### 6. Acessar o drive
+
+Abra `https://$DRIVE_DOMAIN`. Admin criado automaticamente: `hadix-admin` / `NEXTCLOUD_ADMIN_PASSWORD`. O usuário do drive `hadix` (para uploads via API do Nextcloud) é criado pelo `setup-drive.php`.
+
+---
+
+## Variáveis de ambiente
+
+| Variável | Obrigatória? | Descrição |
+| --- | --- | --- |
+| `ACME_EMAIL` | sim | E-mail usado pelo Caddy para emissão/renovação de certificados TLS. |
+| `API_DOMAIN` | sim | Subdomínio da API (ex.: `api.hadix-ai.site`). |
+| `DRIVE_DOMAIN` | sim | Subdomínio do drive/Nextcloud (ex.: `drive.hadix-ai.site`). |
+| `API_TOKEN` | sim | Token Bearer de acesso à API. Mínimo de 32 caracteres. |
+| `POSTGRES_PASSWORD` | sim | Senha do banco Postgres (`nextcloud`). |
+| `NEXTCLOUD_ADMIN_PASSWORD` | sim | Senha do admin `hadix-admin` do Nextcloud. |
+| `DRIVE_PASSWORD` | sim | Senha do usuário `hadix` do drive (usada pelo `setup-drive.php`). |
+| `OLLAMA_MODEL` | não | Modelo do Ollama (padrão: `qwen3:4b`). |
+| `DRIVE_QUOTA` | não | Quota do usuário do drive (padrão: `20 GB`). |
+| `ALLOWED_ORIGINS` | não | Origens permitidas no CORS, separadas por vírgula (ex.: `https://hadix-ai.site`). Vazio = sem origem permitida. |
+
+---
+
+## API
+
+Todas as rotas `/api/*` exigem o header `Authorization: Bearer $API_TOKEN` (rotas `/healthz` não exigem). Com base nisso:
+
+| Rota | Método | Descrição |
+| --- | --- | --- |
+| `/healthz` | GET | Healthcheck do serviço (público). |
+| `/api/config` | GET | Modelo ativo e URL do drive. |
+| `/api/ready` | GET | `200 ready` se o modelo está carregado; `503 model_missing`/`ollama_unavailable` caso contrário. |
+| `/api/chat` | POST | Envia `{ "messages": [{ role, content }] }` (1–24 msgs, máx. 16.000 chars) e retorna a resposta do modelo. Processa uma requisição por vez. |
+
+---
+
+## Manutenção
+
+### Logs
+
+```bash
+docker compose logs -f --tail=200 api      # logs da API
+docker compose logs -f --tail=100 ollama   # logs de inferência
+```
+
+### Atualizar
+
+```bash
+git pull
+docker compose pull            # imagens (caddy, ollama, postgres, ...)
+docker compose build --pull api
+docker compose up -d --remove-orphans
+```
+
+### Backup
+
+Os dados vivem nos volumes `postgres_data`, `nextcloud_data`, `ollama_data`, `caddy_data` e `caddy_config`. Dump do banco:
+
+```bash
+docker compose exec -T postgres pg_dump -U nextcloud nextcloud > backup-$(date +%F).sql
+```
+
+Para o Nextcloud, use `occ` para suspender/resumir e copie o volume `nextcloud_data`.
+
+### Recuperar de falha do `nextcloud`
+
+Se o contêiner não subir, verifique se `backend/scripts/setup-drive.php` existe (montagem com `:ro` — arquivo inexistente vira um diretório e quebra o contêiner):
+
+```bash
+ls -l scripts/setup-drive.php
+docker compose logs nextcloud | tail -50
+```
+
+---
+
+## Segurança (resumo)
+
+- API, Ollama, Postgres e Redis **não publicam portas no host**; só o Caddy expõe 80/443.
+- Contêiner `api` roda `read_only`, sem capabilities (`cap_drop: ALL`) e com `no-new-privileges`.
+- Token da API comparado com `timingSafeEqual`; CORS restrito via `ALLOWED_ORIGINS`.
+- Rede `data` é `internal: true` (sem egress).
