@@ -1,0 +1,62 @@
+[
+  {
+    "width": 1440,
+    "scrollWidth": 1440,
+    "brokenImages": 0,
+    "brokenLinks": 0,
+    "errors": [],
+    "menu": "passed"
+  },
+  {
+    "width": 1024,
+    "scrollWidth": 1024,
+    "brokenImages": 0,
+    "brokenLinks": 0,
+    "errors": [],
+    "menu": "passed"
+  },
+  {
+    "width": 810,
+    "scrollWidth": 810,
+    "brokenImages": 0,
+    "brokenLinks": 0,
+    "errors": [],
+    "menu": "passed"
+  },
+  {
+    "width": 768,
+    "scrollWidth": 768,
+    "brokenImages": 0,
+    "brokenLinks": 0,
+    "errors": [],
+    "menu": "passed"
+  },
+  {
+    "width": 390,
+    "scrollWidth": 390,
+    "brokenImages": 0,
+    "brokenLinks": 0,
+    "errors": [],
+    "menu": "passed"
+  },
+  {
+    "width": 320,
+    "scrollWidth": 320,
+    "brokenImages": 0,
+    "brokenLinks": 0,
+    "errors": [],
+    "menu": "passed"
+  },
+  {
+    "mode": "reduced-motion",
+    "passed": true
+  },
+  {
+    "mode": "blocked-gsap",
+    "passed": true
+  },
+  {
+    "mode": "no-javascript",
+    "passed": true
+  }
+]
