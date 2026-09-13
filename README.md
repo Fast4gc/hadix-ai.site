@@ -46,7 +46,25 @@ hadix-ai.site/
 
 ---
 
-## Instalação passo a passo
+## Instalação (uma linha)
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/Fast4gc/hadix.app/main/install.sh
+chmod +x install.sh
+sudo ./install.sh
+```
+
+ou com wget:
+
+```bash
+wget https://raw.githubusercontent.com/Fast4gc/hadix.app/main/install.sh
+chmod +x install.sh
+sudo ./install.sh
+```
+
+O script instala o Docker/Compose (quando necessário), clona o repositório em `/opt/hadix`, cria o `.env` interativamente (domínios, e-mail e segredos), sobe a stack, baixa o modelo e configura o usuário do drive. Saiba mais com `sudo ./install.sh --help`.
+
+## Instalação passo a passo (manual)
 
 ### 1. Clonar o repositório
 
@@ -76,7 +94,7 @@ docker compose up -d --build
 
 Na primeira execução:
 
-- o `compose.yaml` monta `./scripts/setup-drive.php` dentro do contêiner do Nextcloud. **Este arquivo é esperado mas não está versionado** — ele cria o usuário do drive (`HADIX_DRIVE_USER`) com a quota `DRIVE_QUOTA`. Sem ele, a criação do serviço `nextcloud` falha. Veja a nota no fim do documento.
+- o `compose.yaml` monta `./scripts/setup-drive.php` dentro do contêiner do Nextcloud. **Este arquivo é esperado mas não está versionado** — ele cria o usuário do drive (`HADIX_DRIVE_USER`) com a quota `DRIVE_QUOTA`. O `install.sh` gera uma versão padrão automaticamente quando o arquivo não existe; na instalação manual, crie-o antes do `up` (sem ele a criação do serviço `nextcloud` falha). Veja a nota no fim do documento.
 - Os certificados HTTPS são emitidos automaticamente pelo Caddy via ACME (e-mail em `ACME_EMAIL`).
 
 ### 4. Baixar o modelo no Ollama
