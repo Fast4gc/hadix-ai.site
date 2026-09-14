@@ -1,0 +1,35 @@
+{
+  "name": "hadix-ai-dashboard",
+  "displayName": "Hadix AI Dashboard",
+  "description": "Workspace privado para conversar com a API Hadix e exportar conversas em imagens.",
+  "version": "1.0.0",
+  "publisher": "hadix-local",
+  "license": "MIT",
+  "engines": { "vscode": "^1.95.0" },
+  "categories": ["Other"],
+  "activationEvents": ["onCommand:hadix.openDashboard", "onCommand:hadix.configureConnection"],
+  "main": "./out/extension.js",
+  "extensionKind": ["ui"],
+  "contributes": {
+    "commands": [
+      { "command": "hadix.openDashboard", "title": "Hadix AI: Open Dashboard" },
+      { "command": "hadix.configureConnection", "title": "Hadix AI: Configure Connection" }
+    ],
+    "configuration": {
+      "title": "Hadix AI",
+      "properties": {
+        "hadix.apiUrl": { "type": "string", "default": "https://api.hadix.site", "scope": "application", "description": "URL da API. HADIX_API_URL também pode fornecer o endereço." },
+        "hadix.transport": { "type": "string", "enum": ["bridge", "direct"], "default": "bridge", "scope": "application", "description": "bridge faz as chamadas no host; direct exige CORS para a Webview. Reabra o painel após alterar." }
+      }
+    }
+  },
+  "scripts": {
+    "sync": "node scripts/sync-media.cjs",
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
+    "vscode:prepublish": "npm run sync && npm run compile",
+    "package": "vsce package --allow-missing-repository",
+    "test": "npm run compile && node --test test/*.test.cjs"
+  },
+  "devDependencies": { "@types/node": "^22.0.0", "@types/vscode": "^1.95.0", "typescript": "^5.7.0", "@vscode/vsce": "^3.2.0" }
+}
