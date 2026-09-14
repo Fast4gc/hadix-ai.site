@@ -12,14 +12,32 @@ Após editar a fonte, execute na raiz do repositório:
 node scripts/sync-dashboard.cjs
 ```
 
-Isso atualiza `index.html`, `chat.html`, `app/index.html` e a cópia da extensão. O servidor estático existente atende `/`, `/chat.html` e `/app/`; publique esses arquivos no volume do site para atualizar a VPS. Nenhum arquivo da API, Docker ou Caddy foi alterado para esta entrega.
+Isso mantém a landing em `index.html` e atualiza `login/index.html`, `chat.html`, `app/index.html`, a cópia da extensão e o HTML embutido em `install.sh`. O fluxo é `/` → `/login/` → `/app/`. Publique `backend/site` no volume do site para atualizar a VPS. Nenhum arquivo da API, Docker ou Caddy foi alterado para esta entrega.
 
 ## Testar no navegador
 
 1. Depois de publicar os arquivos estáticos, abra `https://ai.hadix.site/app/` e configure URL da API e token Bearer.
 2. Confira modelo e status da sessão; envie por Enter e pelo botão. A URL não deve mudar e o painel Network deve mostrar OPTIONS e POST bem-sucedidos.
 3. Teste Shift+Enter, Parar, nova conversa, troca de conversa e recarregamento. O histórico deve persistir.
-4. O token fica em memória por padrão. A opção de lembrar grava a conexão em localStorage; Sair remove essa credencial. Conversas ficam no dispositivo, limitadas a 50 conversas e 200 mensagens por conversa.
+4. O token fica em sessionStorage por padrão, mantendo o login nos recarregamentos desta aba. A opção de lembrar grava a conexão em localStorage; Sair remove ambas as credenciais e volta ao login. Conversas ficam no dispositivo, limitadas a 50 conversas e 200 mensagens por conversa. A autenticação continua sendo pelo token da API, sem cadastro de contas individuais.
+
+## HTTP 503 / modelo ausente
+
+A verificação na API publicada retornou `503 {"status":"model_missing","model":"qwen3:4b"}`. O dashboard mostra esse estado e impede novos envios até o modelo estar disponível. Clique em **Verificar novamente** depois da instalação.
+
+Se a VPS foi instalada pelo instalador Hadix, execute nela:
+
+```bash
+sudo hadix model qwen3:4b
+```
+
+Alternativamente, na cópia do repositório na VPS:
+
+```bash
+bash scripts/repair-model.sh /caminho/do/projeto/backend
+```
+
+O script consulta o modelo configurado no container da API, baixa-o no Ollama e confirma sua presença. Precisa do Docker em execução e acesso à internet. Não coloca o token na linha de comando. Não é preciso reinstalar a stack ou apagar volumes. A instalação do modelo ainda depende de execução na VPS; mudar o HTML não instala o modelo remoto.
 
 Para desenvolvimento, sirva `backend/site` por HTTP e use uma API que autorize essa origem. A origem `file://` não substitui uma origem CORS autorizada. O visual funciona sem internet/CDN; conversar requer acesso à API configurada.
 
