@@ -1838,8 +1838,8 @@ case "\${1:-help}" in
   env)     require_root; cat .env ;;
   model)
     require_root
-    local model
-    [ -f "\$ENV_FILE" ] && model="\$(grep '^OLLAMA_MODEL=' \$ENV_FILE | head -1 | cut -d= -f2 | tr -d '\"')"
+    model=""
+    [ -f "\$ENV_FILE" ] && model="\$(grep '^OLLAMA_MODEL=' "\$ENV_FILE" | head -1 | cut -d= -f2 | tr -d '\"' || true)"
     docker compose exec -T ollama ollama pull "\${2:-\${model:-qwen3:4b}}" ;;
   update)
     require_root
