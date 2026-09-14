@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#08090a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2308090a'/%3E%3Cpath d='M16 5v22M5 16h22M8 8l16 16M8 24L24 8' stroke='%23d6ecc1' stroke-width='2'/%3E%3C/svg%3E">
 <meta id="hadix-csp" http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; connect-src 'self' https: http://localhost:* http://127.0.0.1:* http://[::1]:*; base-uri 'none'; form-action 'none';">
 <title>Hadix AI — Workspace</title>
 <style>
@@ -213,6 +214,11 @@ async function send(text) {
  pollController?.abort();pollController=null;
  $('chatInput').value='';$('chatNotice').textContent='Enviando '+recent.length+' mensagens de contexto. Você pode parar a geração.';
  persist();render();updateSession();const started=performance.now();let timedOut=false;
+ const progress=setInterval(()=>{
+  if(inflight!==request||generation!==epoch)return;
+  const seconds=Math.floor((performance.now()-started)/1000);
+  $('chatNotice').textContent='Aguardando a IA · '+seconds+' s'+(seconds>=30?' · O servidor ainda não devolveu a resposta. Você pode parar a geração.':' · A resposta aparecerá quando a geração terminar.');
+ },1000);
  const timeout=setTimeout(()=>{timedOut=true;controller.abort();},270000);
  try {
   const data=await api('/api/chat',{method:'POST',body:{messages:recent},signal:controller.signal});
@@ -223,7 +229,7 @@ async function send(text) {
   if(err.name==='AbortError'&&!timedOut){assistant.state='stopped';assistant.notice='Geração interrompida.';}
   else{assistant.state='error';assistant.notice=timedOut?'A resposta demorou além do limite. Tente uma pergunta menor.':errorMessage(err);if(generation===epoch){if(err.status===401)expire();else if(['model_busy','rate_limited'].includes(err.code))lastStatus='busy';else lastStatus=['model_missing','ollama_unavailable'].includes(err.code)?err.code:'error';}}
  }finally{
-  clearTimeout(timeout);if(inflight===request)inflight=null;
+  clearTimeout(timeout);clearInterval(progress);if(inflight===request)inflight=null;
   persist();render();updateSession();
   if(generation===epoch){$('chatNotice').textContent=assistant.state==='stopped'?'Geração interrompida. Você pode continuar a conversa.':assistant.state==='error'?assistant.notice:'Contexto enviado: '+recent.length+' mensagens · Histórico salvo neste dispositivo.';if(selected===conversation.id)$('chatInput').focus();}
  }
