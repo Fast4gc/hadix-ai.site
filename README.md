@@ -69,20 +69,39 @@ sudo ./install.sh
 
 > **Nota:** o repositório precisa estar **público** no GitHub para o `wget`/`curl` funcionar (repo privado retorna 404/arquivo vazio). Em GitHub → Settings → Danger Zone → Change visibility → Make public.
 
-O script detecta automaticamente se está dentro do repositório ou foi baixado via wget. Em ambos os casos:
+O script é **autossuficiente** (não depende do clone do repositório): ele gera toda a stack em `/opt/hadix/backend` e instala o comando `hadix`. Passos que ele executa:
 - Instala Docker/Compose (se necessário)
-- Gera o `.env` interativamente
-- Cria o `scripts/setup-drive.php`
-- Sobe a stack completa
+- Gera os arquivos do backend (`compose.yaml`, Caddyfile, API, `Dockerfile`, `setup-drive.php`)
+- Gera o `.env` interativamente (ou via variáveis de ambiente com `-y`)
+- Instala o comando **`hadix`** em `/usr/local/bin/hadix`
+- Sobe a stack completa, baixa o modelo do Ollama e cria o usuário do drive
 
 ### Flags
 
 ```
 -y, --yes            Não interativo (define tudo via variáveis de ambiente)
---skip-env           Mantém o .env existente
--f, --force-env      Recria o .env do zero
---no-docker          Pula instalação do Docker
+-d, --dir <caminho>  Diretório de instalação (padrão: /opt/hadix)
+-h, --help           Mostra a ajuda
 ```
+
+> Para instalar em outro diretório: `sudo bash install.sh -d /srv/hadix`
+
+### Comando `hadix`
+
+Após a instalação, gerencie a stack com `sudo`:
+
+```
+sudo hadix start          sobe a stack
+sudo hadix stop           derruba a stack
+sudo hadix restart        reinicia os containers
+sudo hadix status         status dos containers
+sudo hadix logs [serviço] logs (padrão: api)
+sudo hadix env            mostra o .env
+sudo hadix model [nome]   baixa um modelo no Ollama
+sudo hadix help           mostra esta ajuda
+```
+
+> Se a instalação for feita em outro diretório (`-d`), passe `HADIX_DIR` ao instalar para o comando `hadix` apontar para o lugar certo: `HADIX_DIR=/srv/hadix sudo bash install.sh`.
 
 ### 3. Subir a stack
 
