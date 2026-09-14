@@ -1,0 +1,6 @@
+{
+  "name": "hadix-dashboard-checks",
+  "private": true,
+  "scripts": { "test": "node integration.cjs" },
+  "devDependencies": { "playwright": "^1.58.0" }
+}
