@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hadix AI — Entrar</title>
+<meta name="description" content="Entre para conversar com as IAs do Ollama via Hadix AI.">
+<meta name="theme-color" content="#08090a">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+:root {
+  --hadix-bg: #0b0d0f;
+  --hadix-panel: #12151a;
+  --hadix-panel-2: #171b21;
+  --hadix-border: #262b33;
+  --hadix-text: #e7ebee;
+  --hadix-muted: #9aa4ad;
+  --hadix-lime: #d6ecc1;
+  --hadix-lime-2: #b9d99a;
+  --hadix-accent: #85ddf4;
+}
+body { background: var(--hadix-bg); color: var(--hadix-text); min-height: 100vh; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.card-hadix { background: var(--hadix-panel); border: 1px solid var(--hadix-border); border-radius: 14px; }
+.form-control, .form-select { background: #0f1216; border: 1px solid var(--hadix-border); color: var(--hadix-text); }
+.form-control:focus, .form-select:focus { background: #0f1216; border-color: var(--hadix-lime); color: var(--hadix-text); box-shadow: 0 0 0 .2rem rgba(214,236,193,.15); }
+.form-control::placeholder { color: #5c676c; }
+.form-label { color: var(--hadix-muted); font-size: .85rem; }
+.btn-lime { background: var(--hadix-lime); color: #0b0d0f; font-weight: 600; }
+.btn-lime:hover, .btn-lime:focus { background: var(--hadix-lime-2); color: #0b0d0f; }
+.btn-ghost { background: transparent; border: 1px solid var(--hadix-border); color: var(--hadix-text); }
+.btn-ghost:hover { border-color: var(--hadix-accent); color: var(--hadix-accent); }
+.brand-mark { color: var(--hadix-lime); }
+.msg { border-radius: 12px; padding: .75rem 1rem; margin-bottom: .75rem; max-width: 85%; white-space: pre-wrap; word-wrap: break-word; }
+.msg-user { background: #1d2b4a; color: #dbe7ff; margin-left: auto; }
+.msg-ai { background: var(--hadix-panel-2); border: 1px solid var(--hadix-border); color: var(--hadix-text); }
+.chat-scroll { max-height: calc(100vh - 260px); overflow-y: auto; }
+.muted { color: var(--hadix-muted); }
+h1, .h5 { letter-spacing: -.02em; }
+.loading-dot { display:inline-block; width:8px; height:8px; margin:0 2px; border-radius:50%; background:var(--hadix-muted); opacity:.3; animation:blink 1.2s infinite; }
+.loading-dot:nth-child(2){animation-delay:.2s}
+.loading-dot:nth-child(3){animation-delay:.4s}
+@keyframes blink { 50% { opacity: 1; } }
+</style>
+</head>
+<body>
+<div class="container" style="max-width: 720px;">
+  <div class="text-center py-4">
+    <h1 class="h4 mb-0 fw-bold"><span class="brand-mark">✳</span> hadix<span class="text-white">.ai</span></h1>
+    <p class="muted small mb-0">Entre para conversar com as IAs do Ollama.</p>
+  </div>
+
+  <div id="viewLogin" class="card card-hadix p-4">
+    <h2 class="h5 fw-semibold mb-3">Entrar</h2>
+    <form id="loginForm" novalidate>
+      <div class="mb-3">
+        <label class="form-label" for="apiBase">URL da API</label>
+        <input class="form-control" id="apiBase" type="url" value="https://api.hadix.site" placeholder="https://api.hadix.site" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="apiToken">Token de acesso</label>
+        <input class="form-control" id="apiToken" type="password" placeholder="API_TOKEN do .env" autocomplete="off" required>
+        <div class="form-text muted small">O token está no .env do servidor (API_TOKEN).</div>
+      </div>
+      <div id="loginError" class="alert alert-danger py-2 small d-none"></div>
+      <button class="btn btn-lime w-100" id="loginBtn" type="submit">Entrar</button>
+    </form>
+  </div>
+
+  <div id="viewChat" class="d-none">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <div class="h5 mb-0"><span class="brand-mark">✳</span> <span id="chatModel">IA</span></div>
+        <div class="muted small"><i class="bi bi-circle-fill" id="statusDot" style="font-size:.55rem;"></i> <span id="chatStatus">conectando...</span></div>
+      </div>
+      <button class="btn btn-sm btn-ghost" id="logoutBtn" type="button"><i class="bi bi-box-arrow-right"></i> Sair</button>
+    </div>
+    <div class="card card-hadix p-3">
+      <div class="chat-scroll" id="messages" style="min-height: 320px;">
+        <div class="muted small text-center py-4">Converse com a IA. Comece perguntando algo.</div>
+      </div>
+      <form id="chatForm" class="d-flex gap-2 mt-2">
+        <textarea class="form-control" id="chatInput" rows="1" placeholder="Escreva sua mensagem..." style="resize:none;"></textarea>
+        <button class="btn btn-lime px-4" id="sendBtn" type="submit"><i class="bi bi-send"></i></button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const store = {
+    get() { try { return JSON.parse(localStorage.getItem('hadix.chat') || 'null'); } catch { return null; } },
+    set(cfg) { localStorage.setItem('hadix.chat', JSON.stringify(cfg)); },
+    clear() { localStorage.removeItem('hadix.chat'); }
+  };
+  const cfg = () => store.get() || {};
+  const init = () => cfg().base && cfg().token ? enterChat() : showLogin();
+
+  function showLogin() {
+    $('viewLogin').classList.remove('d-none');
+    $('viewChat').classList.add('d-none');
+    $('loginError').classList.add('d-none');
+  }
+
+  function showLoginError(msg) {
+    const el = $('loginError');
+    el.textContent = msg;
+    el.classList.remove('d-none');
+  }
+
+  async function api(path, options = {}) {
+    const headers = { 'Authorization': 'Bearer ' + cfg().token, ...(options.headers || {}) };
+    const res = await fetch(cfg().base.replace(/\/$/, '') + path, { ...options, headers });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.message || body.error || ('HTTP ' + res.status));
+    return body;
+  }
+
+  async function enterChat() {
+    $('viewLogin').classList.add('d-none');
+    $('viewChat').classList.remove('d-none');
+    $('chatStatus').textContent = 'conectando...';
+    $('messages').innerHTML = '<div class="muted small text-center py-4">Converse com a IA. Comece perguntando algo.</div>';
+    try {
+      const info = await api('/api/config');
+      $('chatModel').textContent = info.model || 'IA';
+      $('statusDot').style.color = '#b9d99a';
+      $('chatStatus').textContent = 'pronta';
+    } catch (err) {
+      $('statusDot').style.color = '#f2a0a0';
+      $('chatStatus').textContent = 'API indisponível (' + (err.message || err) + ')';
+    }
+  }
+
+  $('loginForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    $('loginError').classList.add('d-none');
+    const base = $('apiBase').value.trim().replace(/\/+$/, '');
+    const token = $('apiToken').value.trim();
+    if (!base || !token) { showLoginError('Preencha a URL da API e o token.'); return; }
+    const btn = $('loginBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Verificando...';
+    store.set({ base, token });
+    try {
+      await api('/api/config');
+      enterChat();
+    } catch (err) {
+      showLoginError('Não foi possível autenticar: ' + (err.message || err));
+      store.clear();
+    } finally {
+      btn.disabled = false; btn.innerHTML = 'Entrar';
+    }
+  });
+
+  $('logoutBtn').addEventListener('click', function () {
+    store.clear();
+    showLogin();
+    $('apiToken').value = '';
+  });
+
+  $('chatForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const input = $('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    const box = $('messages');
+    const emptyPH = box.querySelector('.text-center.py-4');
+    if (emptyPH) emptyPH.remove();
+
+    const userDiv = document.createElement('div');
+    userDiv.className = 'msg msg-user';
+    userDiv.textContent = text;
+    box.appendChild(userDiv);
+
+    const aiDiv = document.createElement('div');
+    aiDiv.className = 'msg msg-ai';
+    aiDiv.innerHTML = '<span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>';
+    box.appendChild(aiDiv);
+    box.scrollTop = box.scrollHeight;
+
+    const sendBtn = $('sendBtn');
+    sendBtn.disabled = true;
+    try {
+      const data = await api('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [{ role: 'user', content: text }] })
+      });
+      aiDiv.textContent = data.message?.content || '(resposta vazia)';
+    } catch (err) {
+      aiDiv.textContent = 'Erro: ' + (err.message || err);
+    } finally {
+      sendBtn.disabled = false;
+      box.scrollTop = box.scrollHeight;
+      input.focus();
+    }
+  });
+
+  $('chatInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('chatForm').dispatchEvent(new Event('submit')); }
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>

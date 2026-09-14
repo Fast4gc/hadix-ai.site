@@ -32,3 +32,13 @@
   redir /.well-known/caldav /remote.php/dav 301
   reverse_proxy nextcloud:80
 }
+
+{$AI_DOMAIN} {
+  encode zstd gzip
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    -Server
+  }
+  root * /srv/site
+  file_server
+}

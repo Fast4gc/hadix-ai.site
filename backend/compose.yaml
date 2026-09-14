@@ -15,9 +15,11 @@ services:
       ACME_EMAIL: ${ACME_EMAIL:?Configure .env}
       API_DOMAIN: ${API_DOMAIN:?Configure .env}
       DRIVE_DOMAIN: ${DRIVE_DOMAIN:?Configure .env}
+      AI_DOMAIN: ${AI_DOMAIN:?Configure .env}
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./panel:/srv/panel:ro
+      - ./site:/srv/site:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:
