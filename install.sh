@@ -287,7 +287,7 @@ COMPOSE
     Strict-Transport-Security "max-age=31536000"
     -Server
   }
-  handle /painel/* {
+  handle_path /painel/* {
     root * /srv/panel
     file_server
   }
