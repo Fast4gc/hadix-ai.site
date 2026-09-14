@@ -98,10 +98,43 @@ sudo hadix status         status dos containers
 sudo hadix logs [serviço] logs (padrão: api)
 sudo hadix env            mostra o .env
 sudo hadix model [nome]   baixa um modelo no Ollama
+sudo hadix update [url|file]   atualiza backend + painel (reusa o .env)
 sudo hadix help           mostra esta ajuda
 ```
 
 > Se a instalação for feita em outro diretório (`-d`), passe `HADIX_DIR` ao instalar para o comando `hadix` apontar para o lugar certo: `HADIX_DIR=/srv/hadix sudo bash install.sh`.
+
+### Atualização (`hadix update`)
+
+O `hadix update` baixa o `install.sh` mais recente e o executa em modo não interativo, **reutilizando o `.env` existente**. Ele regrava o backend (compose, Caddyfile, API, painel) e sobe a stack de novo.
+
+```bash
+sudo hadix update                      # baixa da URL padrão (raw do GitHub)
+sudo hadix update https://DOMINIO/install.sh   # de outra URL
+sudo hadix update /caminho/install.sh  # de um arquivo local (ex.: scp)
+```
+
+> A URL padrão aponta para `raw.githubusercontent.com` — como o repositório é **privado**, o download retorna vazio. Para usar o update sem ficar copiando o script manualmente: torne o repo público, ou passe um arquivo/URL própria:
+>
+> ```bash
+> HADIX_UPDATE_URL=https://SEU_HOST/install.sh sudo hadix update
+> ```
+>
+> Exemplo com scp do Windows:
+>
+> ```powershell
+> scp E:\xampp\htdocs\hadix-ai.site\install.sh ubuntu@SEU_IP:~/
+> ```
+> ```bash
+> # no VPS
+> sudo hadix update /home/ubuntu/install.sh
+> ```
+
+### Painel (Bootstrap)
+
+O painel é servido pelo Caddy em `https://$API_DOMAIN/painel/` (gerado pelo instalador em `backend/panel/index.html`). Ele lê `/healthz`, `/api/config`, `/api/ready` e conversa via `/api/chat` usando o `API_TOKEN`. A origem do painel é o mesmo domínio da API (sem CORS).
+
+**Importante:** para o painel conseguir chamar a API por navegador, o `API_TOKEN` fica salvo no `localStorage` do navegador — use o token de um usuário com privilégios limitados se desejar.
 
 ### 3. Subir a stack
 

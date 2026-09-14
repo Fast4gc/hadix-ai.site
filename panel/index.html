@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hadix AI — Painel</title>
+<meta name="description" content="Painel do Hadix AI: status da API, modelo e chat com o agente.">
+<meta name="theme-color" content="#08090a">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+:root {
+  --hadix-bg: #0b0d0f;
+  --hadix-panel: #12151a;
+  --hadix-panel-2: #171b21;
+  --hadix-border: #262b33;
+  --hadix-lime: #c9f24b;
+  --hadix-lime-dim: rgba(201,242,75,.12);
+  --hadix-text: #eef0ec;
+  --hadix-muted: #8b939e;
+  --hadix-monospace: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+body {
+  background: var(--hadix-bg);
+  color: var(--hadix-text);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+a { color: var(--hadix-lime); }
+.brand-mark {
+  display: inline-grid; place-items: center;
+  width: 30px; height: 30px;
+  background: var(--hadix-lime); color: #0b0d0f;
+  border-radius: 8px; font-weight: 700;
+}
+.sidebar {
+  min-height: 100vh;
+  background: var(--hadix-panel);
+  border-right: 1px solid var(--hadix-border);
+}
+.sidebar .nav-link {
+  color: var(--hadix-muted);
+  border-radius: 10px;
+  padding: .6rem .9rem;
+  margin: .15rem 0;
+  display: flex; align-items: center; gap: .65rem;
+  transition: color .15s, background .15s;
+}
+.sidebar .nav-link:hover { color: var(--hadix-text); background: var(--hadix-panel-2); }
+.sidebar .nav-link.active {
+  color: #0b0d0f; background: var(--hadix-lime); font-weight: 600;
+}
+.card {
+  background: var(--hadix-panel);
+  border: 1px solid var(--hadix-border);
+  border-radius: 14px;
+}
+.stat-value {
+  font-family: var(--hadix-monospace);
+  font-size: 1.75rem; font-weight: 500; letter-spacing: -.02em;
+}
+.dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  display: inline-block; flex: 0 0 auto;
+}
+.dot.ok { background: var(--hadix-lime); box-shadow: 0 0 0 4px var(--hadix-lime-dim); }
+.dot.warn { background: #f0b429; box-shadow: 0 0 0 4px rgba(240,180,41,.15); }
+.dot.bad { background: #f2574c; box-shadow: 0 0 0 4px rgba(242,87,76,.15); }
+.mono { font-family: var(--hadix-monospace); }
+.code {
+  background: var(--hadix-panel-2);
+  border: 1px solid var(--hadix-border);
+  border-radius: 8px;
+  padding: .4rem .6rem;
+  font-family: var(--hadix-monospace); font-size: .8rem;
+  color: var(--hadix-text);
+  word-break: break-all;
+}
+.chat-panel { display: flex; flex-direction: column; height: 520px; }
+.chat-log {
+  flex: 1; overflow-y: auto;
+  padding: 1rem;
+  display: flex; flex-direction: column; gap: .75rem;
+}
+.msg {
+  max-width: 82%;
+  padding: .7rem 1rem;
+  border-radius: 14px;
+  font-size: .925rem;
+  line-height: 1.5;
+  white-space: pre-wrap; word-break: break-word;
+}
+.msg.user {
+  align-self: flex-end;
+  background: var(--hadix-lime); color: #0b0d0f;
+  border-bottom-right-radius: 4px;
+}
+.msg.assistant {
+  align-self: flex-start;
+  background: var(--hadix-panel-2);
+  border: 1px solid var(--hadix-border);
+  border-bottom-left-radius: 4px;
+}
+.msg.error { border-color: rgba(242,87,76,.5); color: #ffb4ae; }
+.chat-input { border-top: 1px solid var(--hadix-border); padding: .8rem; background: var(--hadix-panel); border-radius: 0 0 14px 14px; }
+.form-control, .form-select {
+  background: var(--hadix-panel-2);
+  border: 1px solid var(--hadix-border);
+  color: var(--hadix-text);
+}
+.form-control:focus { background: var(--hadix-panel-2); color: var(--hadix-text); border-color: var(--hadix-lime); box-shadow: 0 0 0 .2rem var(--hadix-lime-dim); }
+.btn-lime { background: var(--hadix-lime); color: #0b0d0f; font-weight: 600; border: 0; }
+.btn-lime:hover { background: #d9f86b; color: #0b0d0f; }
+.btn-outline-lime { color: var(--hadix-lime); border: 1px solid var(--hadix-lime); }
+.btn-outline-lime:hover { background: var(--hadix-lime-dim); color: var(--hadix-lime); }
+.footer-note { color: var(--hadix-muted); font-size: .8rem; }
+#endpoints .card { margin-bottom: 1rem; }
+.msg .loading-dots span { animation: blink 1.2s infinite; margin-right: 2px; }
+.msg .loading-dots span:nth-child(2) { animation-delay: .2s; }
+.msg .loading-dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%,80%,100% { opacity: .2 } 40% { opacity: 1 } }
+</style>
+</head>
+<body>
+<div class="d-flex">
+  <!-- Sidebar -->
+  <aside class="sidebar d-none d-md-flex flex-column p-3" style="width: 240px; position: sticky; top: 0;">
+    <div class="d-flex align-items-center gap-2 mb-4 px-1">
+      <span class="brand-mark">✳</span>
+      <div class="lh-1">
+        <div class="fw-bold">Hadix <span class="text-info">AI</span></div>
+        <small class="footer-note">Painel</small>
+      </div>
+    </div>
+    <nav class="nav flex-column">
+      <a class="nav-link active" data-page="dashboard" href="#dashboard"><i class="bi bi-grid-1x2"></i> Visão geral</a>
+      <a class="nav-link" data-page="chat" href="#chat"><i class="bi bi-chat-dots"></i> Chat</a>
+      <a class="nav-link" data-page="endpoints" href="#endpoints"><i class="bi bi-hdd-network"></i> Endpoints</a>
+    </nav>
+    <div class="mt-auto pt-3 ps-1 footer-note">
+      <div id="navStatus" class="d-flex align-items-center gap-2">
+        <span class="dot bad" id="navDot"></span>
+        <span id="navStatusText">Desconectado</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-grow-1 p-3 p-lg-4" style="max-width: 1080px;">
+    <!-- Topbar -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+      <div>
+        <h1 class="h4 mb-0 fw-bold" id="pageTitle">Visão geral</h1>
+        <small class="footer-note" id="pageSub">Status da API Hadix em tempo real</small>
+      </div>
+      <div class="d-flex gap-2">
+        <span class="d-md-none me-1"><span class="dot bad" id="navDotMobile"></span></span>
+        <button class="btn btn-outline-lime btn-sm" data-bs-toggle="modal" data-bs-target="#configModal"><i class="bi bi-gear me-1"></i>Configuração</button>
+      </div>
+    </div>
+
+    <!-- Page: dashboard -->
+    <section id="page-dashboard">
+      <div class="row g-3">
+        <div class="col-sm-6 col-xl-3">
+          <div class="card h-100 p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <small class="footer-note text-uppercase">API</small>
+              <span class="dot warn" id="apiDot"></span>
+            </div>
+            <div class="stat-value" id="apiStat">—</div>
+            <small class="footer-note" id="apiSub">/healthz</small>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="card h-100 p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <small class="footer-note text-uppercase">Modelo</small>
+              <span class="dot warn" id="modelDot"></span>
+            </div>
+            <div class="stat-value" id="modelStat">—</div>
+            <small class="footer-note" id="modelSub">/api/ready</small>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="card h-100 p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <small class="footer-note text-uppercase">Drive</small>
+              <span class="dot warn" id="driveDot"></span>
+            </div>
+            <div class="stat-value" id="driveStat">—</div>
+            <small class="footer-note" id="driveSub">/api/config</small>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="card h-100 p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <small class="footer-note text-uppercase">Latência</small>
+              <span class="dot warn" id="latDot"></span>
+            </div>
+            <div class="stat-value" id="latStat">—</div>
+            <small class="footer-note" id="latSub">última medição</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-3 mt-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h2 class="h6 mb-0">Sistema</h2>
+          <button class="btn btn-sm btn-outline-lime" id="refreshBtn"><i class="bi bi-arrow-clockwise me-1"></i>Atualizar</button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-dark align-middle mb-0" style="--bs-table-bg:transparent">
+            <thead>
+              <tr><th class="footer-note text-uppercase">Componente</th><th class="footer-note text-uppercase">Endereço</th><th class="footer-note text-uppercase">Status</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>API</td><td class="mono" id="apiUrlCell">—</td><td id="apiStateCell">—</td></tr>
+              <tr><td>Modelo</td><td class="mono" id="modelCell">—</td><td id="modelStateCell">—</td></tr>
+              <tr><td>Drive</td><td class="mono" id="driveCell">—</td><td id="driveStateCell">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Page: chat -->
+    <section id="page-chat" class="d-none">
+      <div class="card">
+        <div class="card-body chat-panel p-0">
+          <div class="chat-log" id="chatLog" aria-live="polite">
+            <div class="msg assistant">Olá. Sou o agente do Hadix AI rodando no modelo <b id="chatModelLabel">—</b>. Como posso ajudar?</div>
+          </div>
+          <div class="chat-input d-flex gap-2">
+            <input class="form-control" id="chatText" type="text" autocomplete="off" placeholder="Escreva sua mensagem…">
+            <button class="btn btn-lime" id="chatSend"><i class="bi bi-send-fill"></i></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Page: endpoints -->
+    <section id="page-endpoints" class="d-none">
+      <div class="card p-3 mb-3">
+        <h2 class="h6 mb-3">Rotas da API</h2>
+        <p class="footer-note mb-0">Todas as rotas <code class="code">/api/*</code> exigem o header <code class="code">Authorization: Bearer &lt;token&gt;</code>. A rota <code class="code">/healthz</code> é pública.</p>
+      </div>
+      <div id="endpoints">
+        <div class="card p-3"><div class="d-flex align-items-center gap-2"><span class="badge bg-secondary mono">GET</span><span class="code">/healthz</span><span class="dot ok"></span></div><small class="footer-note">Público — status do serviço.</small></div>
+        <div class="card p-3"><div class="d-flex align-items-center gap-2"><span class="badge bg-secondary mono">GET</span><span class="code">/api/config</span></div><small class="footer-note">Token — modelo, URL do drive e paralelismo máximo.</small></div>
+        <div class="card p-3"><div class="d-flex align-items-center gap-2"><span class="badge bg-secondary mono">GET</span><span class="code">/api/ready</span></div><small class="footer-note">Token — se o modelo está carregado (200) ou ausente (503).</small></div>
+        <div class="card p-3"><div class="d-flex align-items-center gap-2"><span class="badge bg-info mono">POST</span><span class="code">/api/chat</span></div><small class="footer-note">Token — corpo: <code class="code">{"messages":[{"role":"user","content":"…"}]}</code>. Rate limit: 12/min.</small></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Config modal -->
+<div class="modal fade" id="configModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background: var(--hadix-panel); border: 1px solid var(--hadix-border); color: var(--hadix-text);">
+      <div class="modal-header border-secondary-subtle">
+        <h5 class="modal-title">Configuração</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="cfgApi" class="form-label footer-note">Endereço da API</label>
+          <input id="cfgApi" class="form-control mono" placeholder="https://api.hadix.site">
+          <div class="form-text footer-note">Usado para /healthz, /api/config, /api/ready e /api/chat.</div>
+        </div>
+        <div class="mb-3">
+          <label for="cfgToken" class="form-label footer-note">Token de acesso (API_TOKEN)</label>
+          <input id="cfgToken" class="form-control mono" type="password" placeholder="Bearer token">
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="cfgSave">
+          <label class="form-check-label footer-note" for="cfgSave">Salvar localmente</label>
+        </div>
+      </div>
+      <div class="modal-footer border-secondary-subtle">
+        <button class="btn btn-lime" data-bs-dismiss="modal" id="cfgSaveBtn">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(() => {
+  'use strict';
+  const STORE_KEY = 'hadix.panel.v1';
+  const $ = id => document.getElementById(id);
+
+  const cfg = { apiBase: '', token: '', save: false };
+  const loadCfg = () => {
+    const saved = localStorage.getItem(STORE_KEY);
+    if (saved) {
+      const p = JSON.parse(saved);
+      Object.assign(cfg, p);
+    }
+    cfg.apiBase = cfg.apiBase || location.origin.replace(/^https?:\/\/([^.]+\.)?/, 'https://api.');
+    $('cfgApi').value = cfg.apiBase;
+    $('cfgToken').value = cfg.token;
+    $('cfgSave').checked = cfg.save;
+  };
+  const storeCfg = () => {
+    if (cfg.save) localStorage.setItem(STORE_KEY, JSON.stringify(cfg));
+    else localStorage.removeItem(STORE_KEY);
+  };
+
+  const setDot = (el, st) => {
+    el.classList.remove('ok', 'warn', 'bad');
+    if (st === 'ok') el.classList.add('ok');
+    else if (st === 'bad') el.classList.add('bad');
+    else el.classList.add('warn');
+  };
+
+  const api = async (path, { method = 'GET', body, timeoutMs = 6000 } = {}) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(cfg.apiBase.replace(/\/$/, '') + path, {
+        method, signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(cfg.token ? { Authorization: `Bearer ${cfg.token}` } : {}),
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, status: res.status, data };
+    } finally { clearTimeout(timer); }
+  };
+
+  const fmt = ms => ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)} s`;
+
+  async function refresh() {
+    setDot($('navDot'), 'warn'); setDot($('navDotMobile'), 'warn');
+    $('navStatusText').textContent = cfg.apiBase ? 'Verificando…' : 'Sem configuração';
+
+    const t0 = performance.now();
+    const health = await api('/healthz');
+    const latency = performance.now() - t0;
+
+    // API
+    $('apiStat').textContent = health.ok ? 'online' : (health.status ? `HTTP ${health.status}` : 'offline');
+    setDot($('apiDot'), health.ok ? 'ok' : 'bad');
+    $('apiSub').textContent = health.ok ? 'respondendo' : 'sem resposta';
+    $('apiUrlCell').textContent = cfg.apiBase || '—';
+    $('apiStateCell').innerHTML = `<span class="dot ${health.ok ? 'ok' : 'bad'} me-1"></span>${health.ok ? 'online' : 'offline'}`;
+
+    // Latência
+    $('latStat').textContent = cfg.apiBase ? fmt(latency) : '—';
+    setDot($('latDot'), latency < 2000 ? 'ok' : (health.ok ? 'warn' : 'bad'));
+    $('latSub').textContent = health.ok ? `carregou em ${fmt(latency)}` : 'falhou';
+
+    if (!cfg.apiBase) {
+      setDot($('navDot'), 'bad'); setDot($('navDotMobile'), 'bad');
+      $('navStatusText').textContent = 'Configure a API';
+      return;
+    }
+    if (!cfg.token) {
+      setDot($('navDot'), 'bad'); setDot($('navDotMobile'), 'bad');
+      $('navStatusText').textContent = 'Token ausente';
+    }
+
+    // Config + Ready (exigem token)
+    const [conf, ready] = await Promise.all([
+      api('/api/config').catch(() => ({ ok: false, status: 0, data: {} })),
+      api('/api/ready', { timeoutMs: 8000 }).catch(() => ({ ok: false, status: 0, data: {} })),
+    ]);
+
+    const modelName = conf.data.model || '—';
+    $('modelCell').textContent = modelName;
+    $('chatModelLabel').textContent = modelName;
+
+    if (ready.ok && ready.data.status === 'ready') {
+      $('modelStat').textContent = 'pronto';
+      setDot($('modelDot'), 'ok');
+      $('modelSub').textContent = modelName;
+    } else if (conf.ok) {
+      $('modelStat').textContent = 'baixando';
+      setDot($('modelDot'), 'warn');
+      $('modelSub').textContent = modelName;
+    } else {
+      $('modelStat').textContent = 'indisponível';
+      setDot($('modelDot'), 'bad');
+      $('modelSub').textContent = conf.status ? `HTTP ${conf.status}` : 'sem resposta';
+    }
+    $('modelStateCell').innerHTML =
+      `<span class="dot ${ready.ok ? 'ok' : 'bad'} me-1"></span>${ready.ok ? 'pronto' : 'indisponível'}`;
+
+    const driveUrl = conf.data.driveUrl || '—';
+    $('driveStat').textContent = conf.data.driveUrl ? 'ativo' : '—';
+    setDot($('driveDot'), conf.data.driveUrl ? 'ok' : 'warn');
+    $('driveSub').textContent = conf.data.driveUrl ? 'link no config' : 'não definido';
+    $('driveCell').textContent = driveUrl;
+    $('driveStateCell').innerHTML = `<span class="dot ${conf.data.driveUrl ? 'ok' : 'warn'} me-1"></span>${conf.data.driveUrl ? 'ativo' : 'não definido'}`;
+
+    setDot($('navDot'), health.ok && ready.ok ? 'ok' : (health.ok ? 'warn' : 'bad'));
+    setDot($('navDotMobile'), health.ok && ready.ok ? 'ok' : (health.ok ? 'warn' : 'bad'));
+    $('navStatusText').textContent = health.ok ? (ready.ok ? 'Conectado' : `Modelo não pronto`) : 'API offline';
+  }
+
+  // Navegação
+  const titles = {
+    dashboard: ['Visão geral', 'Status da API Hadix em tempo real'],
+    chat: ['Chat', 'Converse com o agente Hadix'],
+    endpoints: ['Endpoints', 'Referência das rotas da API'],
+  };
+  document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+    link.addEventListener('click', () => {
+      document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
+      link.classList.add('active');
+      document.querySelectorAll('section[id^="page-"]').forEach(s => s.classList.add('d-none'));
+      $('page-' + link.dataset.page).classList.remove('d-none');
+      $('pageTitle').textContent = titles[link.dataset.page][0];
+      $('pageSub').textContent = titles[link.dataset.page][1];
+    });
+  });
+
+  // Chat
+  let busy = false;
+  const appendMsg = (role, html) => {
+    const d = document.createElement('div');
+    d.className = 'msg ' + role;
+    d.innerHTML = html;
+    $('chatLog').appendChild(d);
+    $('chatLog').scrollTop = $('chatLog').scrollHeight;
+    return d;
+  };
+
+  async function sendChat() {
+    const text = $('chatText').value.trim();
+    if (!text || busy) return;
+    if (!cfg.apiBase || !cfg.token) {
+      appendMsg('error', 'Configure o endereço da API e o token no ícone de engrenagem.');
+      return;
+    }
+    appendMsg('user', text.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])));
+    $('chatText').value = '';
+    const pending = appendMsg('assistant', '<div class="loading-dots"><span>●</span><span>●</span><span>●</span></div>');
+    busy = true;
+    const res = await api('/api/chat', { method: 'POST', body: { messages: [{ role: 'user', content: text }] }, timeoutMs: 250000 });
+    busy = false;
+    const content = res.data.message?.content || res.data.error || (res.ok ? 'Resposta vazia.' : `Erro ${res.status || ''}`);
+    pending.innerHTML = content.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])).replace(/\n/g, '<br>');
+    if (!res.ok) pending.classList.add('error');
+    $('chatLog').scrollTop = $('chatLog').scrollHeight;
+  }
+
+  $('chatSend').addEventListener('click', sendChat);
+  $('chatText').addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
+
+  // Config save
+  $('cfgSaveBtn').addEventListener('click', () => {
+    cfg.apiBase = $('cfgApi').value.trim().replace(/\/+$/, '');
+    cfg.token = $('cfgToken').value.trim();
+    cfg.save = $('cfgSave').checked;
+    storeCfg();
+    refresh();
+  });
+
+  $('refreshBtn').addEventListener('click', refresh);
+
+  loadCfg();
+  refresh();
+})();
+</script>
+</body>
+</html>

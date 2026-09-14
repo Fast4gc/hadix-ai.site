@@ -9,9 +9,15 @@
     Strict-Transport-Security "max-age=31536000"
     -Server
   }
-  reverse_proxy api:3000 {
-    transport http {
-      response_header_timeout 250s
+  handle /painel/* {
+    root * /srv/panel
+    file_server
+  }
+  handle {
+    reverse_proxy api:3000 {
+      transport http {
+        response_header_timeout 250s
+      }
     }
   }
 }

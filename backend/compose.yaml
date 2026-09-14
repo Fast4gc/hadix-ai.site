@@ -17,11 +17,12 @@ services:
       DRIVE_DOMAIN: ${DRIVE_DOMAIN:?Configure .env}
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./panel:/srv/panel:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:
       edge:
-        ipv4_address: 172.30.50.2
+        ipv4_address: 172.30.60.2
     mem_limit: 256m
     cpus: 0.5
     logging: *logging
@@ -109,7 +110,7 @@ services:
       NEXTCLOUD_ADMIN_USER: hadix-admin
       NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD:?Configure .env}
       NEXTCLOUD_TRUSTED_DOMAINS: ${DRIVE_DOMAIN}
-      TRUSTED_PROXIES: 172.30.50.2
+      TRUSTED_PROXIES: 172.30.60.2
       OVERWRITEPROTOCOL: https
       OVERWRITEHOST: ${DRIVE_DOMAIN}
       OVERWRITECLIURL: https://${DRIVE_DOMAIN}
@@ -143,7 +144,7 @@ services:
 networks:
   edge:
     ipam:
-      config: [{ subnet: 172.30.50.0/24 }]
+      config: [{ subnet: 172.30.60.0/24 }]
   # Egress is needed to download models; no inference service publishes host ports.
   inference: {}
   data:
