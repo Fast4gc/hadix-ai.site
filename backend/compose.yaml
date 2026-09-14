@@ -40,6 +40,9 @@ services:
       API_TOKEN: ${API_TOKEN:?Configure .env}
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:4b}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-8192}
+      OLLAMA_MAX_TOKENS: ${OLLAMA_MAX_TOKENS:-2048}
+      IMAGE_MODEL: ${IMAGE_MODEL:-flux}
       DRIVE_DOMAIN: ${DRIVE_DOMAIN}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
     networks: [edge, inference]

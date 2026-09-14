@@ -16,6 +16,10 @@ export function readConfig(env = process.env) {
     origins: (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean),
     timeoutMs: 240_000,
     rateMax: 12,
+    numCtx: Number(env.OLLAMA_NUM_CTX || 8192),
+    maxTokens: Number(env.OLLAMA_MAX_TOKENS || 2048),
+    imageModel: env.IMAGE_MODEL || 'flux',
+    imageTimeoutMs: 240_000,
   };
 }
 
@@ -80,7 +84,7 @@ export function createApp(config, { fetchImpl = fetch } = {}) {
           model: config.model,
           messages: messages.map(({ role, content }) => ({ role, content })),
           stream: false, think: false, keep_alive: '5m',
-          options: { num_ctx: 2048, num_predict: 512, num_thread: 3, temperature: 0.7 },
+          options: { num_ctx: config.numCtx, num_predict: config.maxTokens, num_thread: 3, temperature: 0.7 },
         }),
       });
       if (!response.ok) return res.status(response.status === 404 ? 503 : 502).json({ error: response.status === 404 ? 'model_missing' : 'ollama_error' });
@@ -93,6 +97,30 @@ export function createApp(config, { fetchImpl = fetch } = {}) {
       clearTimeout(timeout);
       res.off('close', disconnected);
       active = false;
+    }
+  });
+  app.post('/api/image', async (req, res) => {
+    const prompt = req.body?.prompt;
+    if (typeof prompt !== 'string' || !prompt.trim() || prompt.length > 800) {
+      return res.status(400).json({ error: 'invalid_prompt', message: 'Envie um prompt de texto de até 800 caracteres.' });
+    }
+    const sizes = { square: [768, 768], landscape: [1024, 576], portrait: [576, 1024] };
+    const [width, height] = sizes[req.body?.size] || sizes.square;
+    const params = new URLSearchParams({ width: String(width), height: String(height), model: config.imageModel, nologo: 'true' });
+    if (Number.isInteger(req.body?.seed)) params.set('seed', String(req.body.seed));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), config.imageTimeoutMs);
+    try {
+      const upstream = await fetchImpl(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt.trim())}?${params}`, { signal: controller.signal });
+      if (!upstream.ok) return res.status(502).json({ error: 'image_service_error' });
+      const type = upstream.headers.get('content-type') || 'image/jpeg';
+      if (!type.startsWith('image/')) return res.status(502).json({ error: 'image_service_error' });
+      const image = Buffer.from(await upstream.arrayBuffer());
+      res.set('Content-Type', type).set('Cache-Control', 'no-store').send(image);
+    } catch {
+      res.status(controller.signal.aborted ? 504 : 502).json({ error: controller.signal.aborted ? 'image_timeout' : 'image_service_error' });
+    } finally {
+      clearTimeout(timeout);
     }
   });
   app.use((_req, res) => res.status(404).json({ error: 'not_found' }));
