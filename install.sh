@@ -1819,7 +1819,8 @@ summary() {
   echo
   ok "Instalacao concluida!"
   echo
-echo "  API   : https://$API_DOMAIN"
+  echo "  API   : https://$API_DOMAIN"
+  echo "          painel: https://$API_DOMAIN/painel/"
   echo "  Drive : https://$DRIVE_DOMAIN"
   echo "          admin: hadix-admin / (sua NEXTCLOUD_ADMIN_PASSWORD)"
   echo "  Site  : https://$AI_DOMAIN"
